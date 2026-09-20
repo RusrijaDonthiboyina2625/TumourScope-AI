@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TumourScope AI — Upload</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,Segoe UI,Arial,sans-serif;color:#eaf8ff}
+body{background:#020718;overflow-x:hidden}
+body:before{content:"";position:fixed;inset:-20%;z-index:-5;background:
+radial-gradient(circle at 80% 18%,rgba(0,224,255,.35),transparent 19%),
+radial-gradient(circle at 16% 75%,rgba(113,55,255,.30),transparent 23%),
+radial-gradient(circle at 58% 52%,rgba(0,90,180,.22),transparent 25%),
+linear-gradient(135deg,#020718,#06123a 42%,#090522 72%,#01030d);filter:blur(1px)}
+body:after{content:"";position:fixed;inset:0;z-index:-4;opacity:.7;background:
+linear-gradient(120deg,transparent 0 45%,rgba(0,229,255,.08) 45.2%,transparent 45.5%),
+linear-gradient(65deg,transparent 0 65%,rgba(164,70,255,.08) 65.2%,transparent 65.5%)}
+.orb{position:fixed;right:-110px;top:85px;width:410px;height:410px;border-radius:50%;z-index:-2;background:
+radial-gradient(circle at 35% 30%,#fff 0 1%,#55efff 3%,#4d9cff 10%,transparent 29%),
+repeating-radial-gradient(circle at 50% 50%,rgba(0,238,255,.55) 0 2px,transparent 3px 13px),
+radial-gradient(circle,#082f74 0 48%,#03091c 70%);box-shadow:0 0 60px #00d9ff,0 0 150px rgba(115,49,255,.65);transform:rotate(12deg);opacity:.85}
+.orb:after{content:"";position:absolute;inset:-40px;border:2px solid rgba(0,229,255,.35);border-radius:50%;transform:rotateX(70deg) rotateY(20deg);box-shadow:0 0 30px #00d9ff}
+.dna{position:fixed;left:25px;bottom:50px;width:130px;height:360px;z-index:-2;opacity:.35;transform:rotate(-18deg);background:
+repeating-linear-gradient(0deg,transparent 0 22px,rgba(0,229,255,.7) 23px 25px,transparent 26px 45px);
+border-left:5px dotted #7c4dff;border-right:5px dotted #00e5ff;border-radius:50%}
+.star{position:fixed;inset:0;z-index:-3;background-image:radial-gradient(#fff 1px,transparent 1px),radial-gradient(#00e5ff 1px,transparent 1px);background-size:73px 73px,127px 127px;background-position:12px 31px,45px 4px;opacity:.28}
+nav{width:min(1200px,92%);margin:18px auto 0;padding:12px 18px;border:1px solid rgba(0,229,255,.3);border-radius:20px;background:rgba(3,17,52,.72);backdrop-filter:blur(18px);display:flex;align-items:center;justify-content:space-between;box-shadow:0 0 35px rgba(0,190,255,.12)}
+.brand{font-size:22px;font-weight:800;color:#22e8ff;text-shadow:0 0 16px #00e5ff}.navlinks{display:flex;gap:10px}.navlinks span{padding:10px 16px;border-radius:12px;color:#cfefff}.navlinks .active{background:linear-gradient(90deg,#063d82,#321b79);box-shadow:0 0 20px rgba(0,229,255,.2)}
+main{width:min(1200px,92%);margin:42px auto 70px}.hero{text-align:center;margin-bottom:30px}.hero h1{font-size:48px;margin:0;background:linear-gradient(90deg,#fff,#00e5ff,#b56cff);-webkit-background-clip:text;color:transparent;text-shadow:0 0 28px rgba(0,229,255,.22)}.hero p{max-width:760px;margin:12px auto;color:#b8d9ee;line-height:1.7}
+.panel{border:1px solid rgba(0,229,255,.34);border-radius:25px;padding:25px;background:linear-gradient(145deg,rgba(5,30,75,.78),rgba(9,7,43,.7));backdrop-filter:blur(18px);box-shadow:0 18px 60px rgba(0,0,0,.35),0 0 30px rgba(0,229,255,.08)}
+.panel h2{margin:0 0 8px;color:#5ceeff}.sub{color:#a8c8db;margin-bottom:20px}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}.day{padding:16px;border-radius:18px;background:linear-gradient(160deg,rgba(6,50,105,.72),rgba(12,13,55,.76));border:1px solid rgba(55,195,255,.28);box-shadow:inset 0 0 25px rgba(0,229,255,.03)}.day h3{margin:0 0 14px}.day label{display:block;font-size:12px;color:#8edfff;margin:11px 0 5px}.day input[type=text]{width:100%;padding:10px;border-radius:9px;border:1px solid #1371ae;background:#071b43;color:white}.day input[type=file]{width:100%;font-size:11px;color:#dff7ff}
+button{display:block;margin:25px auto 0;border:0;border-radius:16px;padding:15px 30px;font-size:16px;font-weight:800;color:white;background:linear-gradient(90deg,#00bffb,#7b3cff);box-shadow:0 0 28px rgba(0,211,255,.35);cursor:pointer}button:hover{transform:translateY(-2px);box-shadow:0 0 38px rgba(141,70,255,.5)}
+.disclaimer{margin-top:18px;padding:14px;border-radius:13px;background:rgba(255,193,7,.07);border:1px solid rgba(255,193,7,.24);color:#d8e5ed;font-size:12px;text-align:center}
+.features{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:18px}.feature{padding:12px;text-align:center;border:1px solid rgba(0,229,255,.18);border-radius:13px;background:rgba(2,20,52,.6);color:#b8eaff;font-size:12px}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.features{grid-template-columns:repeat(2,1fr)}.hero h1{font-size:36px}.orb{width:270px;height:270px}}@media(max-width:560px){.grid{grid-template-columns:1fr}.navlinks{display:none}}
+</style>
+</head>
+<body>
+<div class="star"></div><div class="orb"></div><div class="dna"></div>
+<nav><div class="brand">🧬 TumourScope AI</div><div class="navlinks"><span class="active">⌂ Upload</span><span>▥ Analysis</span><span>▣ Report</span></div></nav>
+<main>
+<section class="hero">
+<h1>Microscope → Insight</h1>
+<p>AI-assisted image quality checking, spheroid-like region detection, morphology measurement, Earth-control vs Microgravity comparison and day-wise growth analysis.</p>
+</section>
+<form class="panel" action="/analyze" method="post" enctype="multipart/form-data">
+<h2>🧪 Experimental Time Points</h2>
+<div class="sub">Upload one Earth-control image and one Microgravity image for each available day. You can submit Day 1 only, or all five days.</div>
+<div class="grid">
+{% for d in range(1,6) %}
+<div class="day">
+<h3>◉ Day {{d}}</h3>
+<label>Time Point</label><input type="text" name="time_{{d}}" value="Day {{d}}">
+<label>🔵 Earth Control Image</label><input type="file" name="earth_{{d}}" accept="image/*">
+<label>🟣 Microgravity Image</label><input type="file" name="micro_{{d}}" accept="image/*">
+</div>
+{% endfor %}
+</div>
+<button type="submit">✦ Analyze with TumourScope AI</button>
+<div class="disclaimer">⚠ Research prototype. The detector is explainable computer vision, not a trained medical AI model. Measurements depend on image quality and microscope calibration.</div>
+</form>
+<div class="features">
+<div class="feature">🟢 Automatic Detection</div><div class="feature">▣ Boundary Detection</div><div class="feature">▥ Day-wise Analysis</div><div class="feature">↗ Growth %</div><div class="feature">▣ Research PDF</div>
+</div>
+</main>
+</body>
+</html>

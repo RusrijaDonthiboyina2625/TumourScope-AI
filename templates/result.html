@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>TumourScope AI — Results</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,Segoe UI,Arial,sans-serif;color:#eaf8ff}body{background:#020718;overflow-x:hidden}
+body:before{content:"";position:fixed;inset:-20%;z-index:-5;background:radial-gradient(circle at 82% 18%,rgba(0,224,255,.35),transparent 19%),radial-gradient(circle at 15% 78%,rgba(113,55,255,.32),transparent 24%),radial-gradient(circle at 55% 52%,rgba(0,90,180,.22),transparent 25%),linear-gradient(135deg,#020718,#06123a 42%,#090522 72%,#01030d)}
+body:after{content:"";position:fixed;inset:0;z-index:-4;background:linear-gradient(120deg,transparent 0 45%,rgba(0,229,255,.08) 45.2%,transparent 45.5%),linear-gradient(65deg,transparent 0 65%,rgba(164,70,255,.08) 65.2%,transparent 65.5%)}
+.orb{position:fixed;right:-110px;top:70px;width:410px;height:410px;border-radius:50%;z-index:-2;background:radial-gradient(circle at 35% 30%,#fff 0 1%,#55efff 3%,#4d9cff 10%,transparent 29%),repeating-radial-gradient(circle,rgba(0,238,255,.55) 0 2px,transparent 3px 13px),radial-gradient(circle,#082f74 0 48%,#03091c 70%);box-shadow:0 0 60px #00d9ff,0 0 150px rgba(115,49,255,.65);opacity:.8}
+.orb:after{content:"";position:absolute;inset:-40px;border:2px solid rgba(0,229,255,.35);border-radius:50%;transform:rotateX(70deg) rotateY(20deg);box-shadow:0 0 30px #00d9ff}.star{position:fixed;inset:0;z-index:-3;background-image:radial-gradient(#fff 1px,transparent 1px),radial-gradient(#00e5ff 1px,transparent 1px);background-size:73px 73px,127px 127px;background-position:12px 31px,45px 4px;opacity:.28}
+nav{width:min(1250px,94%);margin:18px auto;padding:12px 18px;border:1px solid rgba(0,229,255,.3);border-radius:20px;background:rgba(3,17,52,.72);backdrop-filter:blur(18px);display:flex;align-items:center;justify-content:space-between}.brand{font-size:22px;font-weight:800;color:#22e8ff}.navlinks{display:flex;gap:10px}.navlinks span{padding:10px 16px;border-radius:12px;color:#cfefff}.navlinks .active{background:linear-gradient(90deg,#063d82,#321b79)}
+main{width:min(1250px,94%);margin:30px auto 65px}.hero{text-align:center;margin-bottom:25px}.hero h1{font-size:42px;margin:0;background:linear-gradient(90deg,#fff,#00e5ff,#b56cff);-webkit-background-clip:text;color:transparent}.hero p{color:#afd3e8}.panel{border:1px solid rgba(0,229,255,.34);border-radius:24px;padding:22px;background:linear-gradient(145deg,rgba(5,30,75,.78),rgba(9,7,43,.72));backdrop-filter:blur(18px);box-shadow:0 18px 60px rgba(0,0,0,.35)}.panel h2{color:#5ceeff;margin:0 0 4px}.sub{color:#9fc4d8;margin-bottom:16px}
+.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}.card{border:1px solid rgba(0,229,255,.28);border-radius:17px;padding:12px;background:linear-gradient(160deg,rgba(6,50,105,.72),rgba(12,13,55,.78));box-shadow:inset 0 0 25px rgba(0,229,255,.04)}.card h3{margin:0 0 10px}.imgs{display:grid;grid-template-columns:1fr 1fr;gap:7px}.imgs img{width:100%;aspect-ratio:1;border-radius:9px;object-fit:cover;border:1px solid #20dfff;background:#020816}.cap{text-align:center;font-size:10px;color:#66eaff;margin:4px 0 9px}.metric{display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,.08);padding:7px 0;font-size:11px}.metric b{color:#fff}.growth{margin-top:8px;padding:8px;text-align:center;border-radius:9px;background:rgba(0,255,170,.07);color:#35ffbd;font-weight:800}.confidence{margin-top:7px;font-size:10px;color:#b7d9e8}.bar{height:5px;background:#102642;border-radius:5px;margin-top:4px}.bar i{display:block;height:100%;background:linear-gradient(90deg,#00e5ff,#a84dff);border-radius:5px}.warning{margin-top:8px;padding:7px;border-radius:8px;background:rgba(255,170,0,.09);border:1px solid rgba(255,170,0,.2);color:#ffd889;font-size:10px}
+.lower{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;margin-top:18px}.summary,.reportbox{border:1px solid rgba(0,229,255,.24);border-radius:20px;padding:20px;background:rgba(3,22,59,.7)}.summary h2,.reportbox h2{margin-top:0;color:#5ceeff}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.stat{padding:13px;border-radius:12px;border:1px solid rgba(0,229,255,.2);background:rgba(0,10,30,.35);text-align:center}.stat small{display:block;color:#93bfd2}.stat strong{display:block;font-size:20px;margin-top:5px;color:#23eaff}
+table{width:100%;border-collapse:collapse;margin-top:16px;font-size:12px}th,td{padding:9px;border-bottom:1px solid rgba(255,255,255,.1);text-align:left}th{color:#72eaff}td{color:#d7edf7}.positive{color:#35ffbd;font-weight:800}
+button,.btn{display:inline-block;margin-top:18px;padding:13px 22px;border:0;border-radius:14px;color:#fff;text-decoration:none;font-weight:800;background:linear-gradient(90deg,#00bffb,#7b3cff);box-shadow:0 0 25px rgba(0,211,255,.3);cursor:pointer}.secondary{background:rgba(8,49,90,.9);margin-left:8px}
+.disclaimer{text-align:center;margin-top:18px;padding:12px;border-radius:12px;border:1px solid rgba(255,193,7,.2);color:#c9dce5;font-size:11px}
+@media(max-width:1000px){.cards{grid-template-columns:repeat(2,1fr)}.lower{grid-template-columns:1fr}}@media(max-width:600px){.cards,.stats{grid-template-columns:1fr}.navlinks{display:none}}
+</style>
+</head>
+<body><div class="star"></div><div class="orb"></div>
+<nav><div class="brand">🧬 TumourScope AI</div><div class="navlinks"><span>⌂ Upload</span><span class="active">▥ Analysis</span><span>▣ Report</span></div></nav>
+<main>
+<section class="hero"><h1>Experimental Results</h1><p>Earth Control vs Microgravity · Detection · Morphology · Quality · Growth</p></section>
+<section class="panel">
+<h2>🧪 Day-wise Spheroid Analysis</h2><div class="sub">Original images and detected boundaries are shown for every submitted time point.</div>
+<div class="cards">
+{% for d in days %}
+<div class="card">
+<h3>◉ {{d.time_point}}</h3>
+<div class="imgs">
+<div><img src="{{d.earth.original_url}}" alt="Earth original"><div class="cap">Earth Original</div></div>
+<div><img src="{{d.micro.original_url}}" alt="Micro original"><div class="cap">Micro Original</div></div>
+<div><img src="{{d.earth.processed_url}}" alt="Earth detected"><div class="cap">Earth Boundary</div></div>
+<div><img src="{{d.micro.processed_url}}" alt="Micro detected"><div class="cap">Micro Boundary</div></div>
+</div>
+<div class="metric"><span>Diameter (µm)</span><b>{{"%.2f"|format(d.earth.diameter)}} / {{"%.2f"|format(d.micro.diameter)}}</b></div>
+<div class="metric"><span>Area (µm²)</span><b>{{"%.2f"|format(d.earth.area)}} / {{"%.2f"|format(d.micro.area)}}</b></div>
+<div class="metric"><span>Circularity</span><b>{{"%.3f"|format(d.earth.circularity)}} / {{"%.3f"|format(d.micro.circularity)}}</b></div>
+<div class="growth">Area change: {{ "%+.1f"|format(d.area_change) }}%</div>
+<div class="confidence">Earth confidence: {{d.earth.confidence}}%<div class="bar"><i style="width:{{d.earth.confidence}}%"></i></div>
+Micro confidence: {{d.micro.confidence}}%<div class="bar"><i style="width:{{d.micro.confidence}}%"></i></div></div>
+{% if d.earth.warnings or d.micro.warnings %}<div class="warning">⚠ Review: {{ (d.earth.warnings + d.micro.warnings)|join("; ") }}</div>{% endif %}
+</div>
+{% endfor %}
+</div>
+</section>
+
+<div class="lower">
+<section class="summary">
+<h2>📊 Overall Analysis Summary</h2>
+<p>{{summary}}</p>
+<div class="stats">
+<div class="stat"><small>Time points</small><strong>{{days|length}}</strong></div>
+<div class="stat"><small>Earth avg area</small><strong>{{"%.1f"|format(days|map(attribute='earth')|map(attribute='area')|sum / (days|length))}}</strong></div>
+<div class="stat"><small>Micro avg area</small><strong>{{"%.1f"|format(days|map(attribute='micro')|map(attribute='area')|sum / (days|length))}}</strong></div>
+</div>
+<table><thead><tr><th>Day</th><th>Earth Area</th><th>Micro Area</th><th>Growth %</th></tr></thead><tbody>
+{% for d in days %}<tr><td>{{d.time_point}}</td><td>{{"%.2f"|format(d.earth.area)}}</td><td>{{"%.2f"|format(d.micro.area)}}</td><td class="positive">{{"%+.2f"|format(d.area_change)}}%</td></tr>{% endfor %}
+</tbody></table>
+</section>
+<section class="reportbox">
+<h2>📄 Research Report</h2>
+<p>Download a PDF containing the measurements, time points, confidence/quality notes and research summary.</p>
+<a class="btn" href="/report/{{report_token}}">⇩ Download PDF</a>
+<a class="btn secondary" href="/">＋ Analyze Another Pair</a>
+<div class="disclaimer">Measurements are image-derived. The displayed µm values use a demo calibration of 2 pixels/µm. Replace this with your microscope's real scale.</div>
+</section>
+</div>
+<div class="disclaimer">⚠ This is a research prototype, not a validated medical diagnostic tool. Low-confidence detections should be reviewed by a researcher.</div>
+</main>
+</body></html>
