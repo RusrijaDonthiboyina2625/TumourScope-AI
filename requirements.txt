@@ -1,5 +1,5 @@
 Flask
-gunicorn
-numpy
 opencv-python-headless
+numpy
 reportlab
+gunicorn

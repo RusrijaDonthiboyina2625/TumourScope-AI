@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>TumourScope AI | Experiment History</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background:
+                radial-gradient(circle at top right, #073b7a 0%, transparent 35%),
+                radial-gradient(circle at bottom left, #062b58 0%, transparent 40%),
+                #020817;
+            color: white;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 92%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 35px 0 60px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .header h1 {
+            color: #22e6ff;
+            font-size: 42px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #c7e9ff;
+            font-size: 16px;
+        }
+
+        .actions {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 22px;
+            margin: 5px;
+            border: 1px solid #25dfff;
+            border-radius: 10px;
+            color: white;
+            text-decoration: none;
+            background: rgba(0, 100, 180, 0.35);
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background: rgba(0, 180, 255, 0.5);
+        }
+
+        .empty {
+            background: rgba(10, 55, 110, 0.45);
+            border: 1px solid #178dcc;
+            border-radius: 18px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .empty h2 {
+            color: #22e6ff;
+        }
+
+        .card {
+            background: rgba(5, 35, 75, 0.8);
+            border: 1px solid #148dcc;
+            border-radius: 18px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 20px rgba(0, 180, 255, 0.12);
+        }
+
+        .card h2 {
+            color: #22e6ff;
+            margin-top: 0;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .item {
+            background: rgba(0, 15, 40, 0.55);
+            border-radius: 10px;
+            padding: 14px;
+        }
+
+        .label {
+            color: #7edfff;
+            font-size: 13px;
+            margin-bottom: 5px;
+        }
+
+        .value {
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            word-break: break-word;
+        }
+
+        .status {
+            margin-top: 20px;
+            color: #9fffe9;
+        }
+
+        @media (max-width: 800px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 30px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+        <h1>🔬 TumourScope AI</h1>
+        <p>Experiment History & Database Records</p>
+    </div>
+
+    <div class="actions">
+        <a href="/" class="btn">＋ New Experiment</a>
+    </div>
+
+    {% if experiments %}
+
+        {% for experiment in experiments %}
+
+        <div class="card">
+
+            <h2>
+                🧪 {{ experiment.experiment_name or "Unnamed Experiment" }}
+            </h2>
+
+            <div class="grid">
+
+                <div class="item">
+                    <div class="label">Researcher</div>
+                    <div class="value">
+                        {{ experiment.researcher or "—" }}
+                    </div>
+                </div>
+
+                <div class="item">
+                    <div class="label">Sample ID</div>
+                    <div class="value">
+                        {{ experiment.sample_id or "—" }}
+                    </div>
+                </div>
+
+                <div class="item">
+                    <div class="label">Cell Line</div>
+                    <div class="value">
+                        {{ experiment.cell_line or "—" }}
+                    </div>
+                </div>
+
+                <div class="item">
+                    <div class="label">Experiment Date</div>
+                    <div class="value">
+                        {{ experiment.experiment_date or "—" }}
+                    </div>
+                </div>
+
+                <div class="item">
+                    <div class="label">Microscope</div>
+                    <div class="value">
+                        {{ experiment.microscope_magnification or "—" }}
+                    </div>
+                </div>
+
+                <div class="item">
+                    <div class="label">Calibration</div>
+                    <div class="value">
+                        {{ experiment.pixels_per_um or "—" }} px/µm
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="status">
+                Database record ID:
+                <strong>{{ experiment.id }}</strong>
+            </div>
+
+            <div style="margin-top:20px;">
+                <a
+                    href="{{ url_for('result', experiment_id=experiment.id) }}"
+                    class="btn"
+                >
+                    View Results
+                </a>
+            </div>
+
+        </div>
+
+        {% endfor %}
+
+    {% else %}
+
+        <div class="empty">
+            <h2>No experiments found</h2>
+            <p>
+                No experiment records are currently stored in the SQLite database.
+            </p>
+
+            <a href="/" class="btn">
+                Create Your First Experiment
+            </a>
+        </div>
+
+    {% endif %}
+
+</div>
+
+</body>
+</html>

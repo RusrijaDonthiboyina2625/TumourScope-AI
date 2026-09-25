@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+tumourscope.db
+static/uploads/
+static/generated/
+.env

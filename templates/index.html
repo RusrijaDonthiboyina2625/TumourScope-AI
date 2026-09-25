@@ -1,68 +1,708 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TumourScope AI — Upload</title>
+
+<meta charset="utf-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+>
+
+<title>TumourScope AI | Research Analysis</title>
+
 <style>
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,Segoe UI,Arial,sans-serif;color:#eaf8ff}
-body{background:#020718;overflow-x:hidden}
-body:before{content:"";position:fixed;inset:-20%;z-index:-5;background:
-radial-gradient(circle at 80% 18%,rgba(0,224,255,.35),transparent 19%),
-radial-gradient(circle at 16% 75%,rgba(113,55,255,.30),transparent 23%),
-radial-gradient(circle at 58% 52%,rgba(0,90,180,.22),transparent 25%),
-linear-gradient(135deg,#020718,#06123a 42%,#090522 72%,#01030d);filter:blur(1px)}
-body:after{content:"";position:fixed;inset:0;z-index:-4;opacity:.7;background:
-linear-gradient(120deg,transparent 0 45%,rgba(0,229,255,.08) 45.2%,transparent 45.5%),
-linear-gradient(65deg,transparent 0 65%,rgba(164,70,255,.08) 65.2%,transparent 65.5%)}
-.orb{position:fixed;right:-110px;top:85px;width:410px;height:410px;border-radius:50%;z-index:-2;background:
-radial-gradient(circle at 35% 30%,#fff 0 1%,#55efff 3%,#4d9cff 10%,transparent 29%),
-repeating-radial-gradient(circle at 50% 50%,rgba(0,238,255,.55) 0 2px,transparent 3px 13px),
-radial-gradient(circle,#082f74 0 48%,#03091c 70%);box-shadow:0 0 60px #00d9ff,0 0 150px rgba(115,49,255,.65);transform:rotate(12deg);opacity:.85}
-.orb:after{content:"";position:absolute;inset:-40px;border:2px solid rgba(0,229,255,.35);border-radius:50%;transform:rotateX(70deg) rotateY(20deg);box-shadow:0 0 30px #00d9ff}
-.dna{position:fixed;left:25px;bottom:50px;width:130px;height:360px;z-index:-2;opacity:.35;transform:rotate(-18deg);background:
-repeating-linear-gradient(0deg,transparent 0 22px,rgba(0,229,255,.7) 23px 25px,transparent 26px 45px);
-border-left:5px dotted #7c4dff;border-right:5px dotted #00e5ff;border-radius:50%}
-.star{position:fixed;inset:0;z-index:-3;background-image:radial-gradient(#fff 1px,transparent 1px),radial-gradient(#00e5ff 1px,transparent 1px);background-size:73px 73px,127px 127px;background-position:12px 31px,45px 4px;opacity:.28}
-nav{width:min(1200px,92%);margin:18px auto 0;padding:12px 18px;border:1px solid rgba(0,229,255,.3);border-radius:20px;background:rgba(3,17,52,.72);backdrop-filter:blur(18px);display:flex;align-items:center;justify-content:space-between;box-shadow:0 0 35px rgba(0,190,255,.12)}
-.brand{font-size:22px;font-weight:800;color:#22e8ff;text-shadow:0 0 16px #00e5ff}.navlinks{display:flex;gap:10px}.navlinks span{padding:10px 16px;border-radius:12px;color:#cfefff}.navlinks .active{background:linear-gradient(90deg,#063d82,#321b79);box-shadow:0 0 20px rgba(0,229,255,.2)}
-main{width:min(1200px,92%);margin:42px auto 70px}.hero{text-align:center;margin-bottom:30px}.hero h1{font-size:48px;margin:0;background:linear-gradient(90deg,#fff,#00e5ff,#b56cff);-webkit-background-clip:text;color:transparent;text-shadow:0 0 28px rgba(0,229,255,.22)}.hero p{max-width:760px;margin:12px auto;color:#b8d9ee;line-height:1.7}
-.panel{border:1px solid rgba(0,229,255,.34);border-radius:25px;padding:25px;background:linear-gradient(145deg,rgba(5,30,75,.78),rgba(9,7,43,.7));backdrop-filter:blur(18px);box-shadow:0 18px 60px rgba(0,0,0,.35),0 0 30px rgba(0,229,255,.08)}
-.panel h2{margin:0 0 8px;color:#5ceeff}.sub{color:#a8c8db;margin-bottom:20px}
-.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}.day{padding:16px;border-radius:18px;background:linear-gradient(160deg,rgba(6,50,105,.72),rgba(12,13,55,.76));border:1px solid rgba(55,195,255,.28);box-shadow:inset 0 0 25px rgba(0,229,255,.03)}.day h3{margin:0 0 14px}.day label{display:block;font-size:12px;color:#8edfff;margin:11px 0 5px}.day input[type=text]{width:100%;padding:10px;border-radius:9px;border:1px solid #1371ae;background:#071b43;color:white}.day input[type=file]{width:100%;font-size:11px;color:#dff7ff}
-button{display:block;margin:25px auto 0;border:0;border-radius:16px;padding:15px 30px;font-size:16px;font-weight:800;color:white;background:linear-gradient(90deg,#00bffb,#7b3cff);box-shadow:0 0 28px rgba(0,211,255,.35);cursor:pointer}button:hover{transform:translateY(-2px);box-shadow:0 0 38px rgba(141,70,255,.5)}
-.disclaimer{margin-top:18px;padding:14px;border-radius:13px;background:rgba(255,193,7,.07);border:1px solid rgba(255,193,7,.24);color:#d8e5ed;font-size:12px;text-align:center}
-.features{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:18px}.feature{padding:12px;text-align:center;border:1px solid rgba(0,229,255,.18);border-radius:13px;background:rgba(2,20,52,.6);color:#b8eaff;font-size:12px}
-@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.features{grid-template-columns:repeat(2,1fr)}.hero h1{font-size:36px}.orb{width:270px;height:270px}}@media(max-width:560px){.grid{grid-template-columns:1fr}.navlinks{display:none}}
+
+*{
+    box-sizing:border-box;
+}
+
+html{
+    min-height:100%;
+}
+
+body{
+    margin:0;
+    min-height:100vh;
+
+    font-family:Arial,sans-serif;
+
+    color:#eef8ff;
+
+    /*
+       INPUT PAGE BACKGROUND
+       Make sure this image exists inside:
+       static/TumourScope_Input_Background_1.png
+    */
+    background:
+        linear-gradient(
+            rgba(2,10,25,0.55),
+            rgba(2,10,25,0.68)
+        ),
+        url("/static/TumourScope_Input_Background_1.png");
+
+    background-size:cover;
+    background-position:center center;
+    background-repeat:no-repeat;
+    background-attachment:fixed;
+
+}
+
+/* Mobile background behaviour */
+@media(max-width:768px){
+
+    body{
+        background-attachment:scroll;
+        background-position:center center;
+    }
+
+}
+
+.wrap{
+    max-width:1180px;
+    margin:auto;
+    padding:34px 18px 60px;
+}
+
+.hero{
+    text-align:center;
+    margin-bottom:28px;
+}
+
+.hero h1{
+    font-size:clamp(30px,5vw,58px);
+    margin:0;
+
+    color:#24eaff;
+
+    text-shadow:
+        0 0 22px rgba(36,234,255,.45);
+}
+
+.hero p{
+    max-width:850px;
+    margin:12px auto;
+
+    color:#b7d4e9;
+
+    line-height:1.6;
+}
+
+.nav{
+    display:flex;
+    justify-content:center;
+    gap:12px;
+
+    margin-bottom:20px;
+
+    flex-wrap:wrap;
+}
+
+.nav a{
+    color:#dffaff;
+
+    text-decoration:none;
+
+    padding:10px 16px;
+
+    border:1px solid #185f83;
+
+    border-radius:12px;
+
+    background:rgba(4,25,50,.78);
+
+    transition:.2s;
+}
+
+.nav a:hover{
+    background:rgba(7,65,100,.9);
+
+    transform:translateY(-1px);
+}
+
+.card{
+    background:
+        linear-gradient(
+            145deg,
+            rgba(10,57,104,.86),
+            rgba(2,21,44,.92)
+        );
+
+    border:1px solid rgba(54,197,255,.28);
+
+    border-radius:20px;
+
+    padding:22px;
+
+    margin:18px 0;
+
+    box-shadow:
+        0 15px 50px rgba(0,0,0,.28);
+}
+
+h2{
+    margin:0 0 8px;
+
+    color:#72f3ff;
+}
+
+.hint{
+    color:#a9c7dc;
+
+    font-size:14px;
+
+    line-height:1.5;
+}
+
+.grid{
+    display:grid;
+
+    grid-template-columns:
+        repeat(3,1fr);
+
+    gap:14px;
+}
+
+.grid2{
+    display:grid;
+
+    grid-template-columns:
+        repeat(2,1fr);
+
+    gap:14px;
+}
+
+.field label{
+    display:block;
+
+    font-size:13px;
+
+    color:#b9d7e9;
+
+    margin:0 0 6px;
+}
+
+.field input,
+.field textarea{
+
+    width:100%;
+
+    border:
+        1px solid #21729a;
+
+    border-radius:11px;
+
+    background:#04182e;
+
+    color:white;
+
+    padding:12px;
+
+    font-size:15px;
+
+    outline:none;
+
+}
+
+.field input:focus,
+.field textarea:focus{
+
+    border-color:#24dfff;
+
+    box-shadow:
+        0 0 0 2px rgba(36,223,255,.12);
+
+}
+
+.field textarea{
+    min-height:90px;
+
+    resize:vertical;
+}
+
+.day{
+
+    border:
+        1px solid rgba(60,200,255,.18);
+
+    border-radius:16px;
+
+    padding:16px;
+
+    margin-top:14px;
+
+    background:
+        rgba(2,18,37,.55);
+}
+
+.daytitle{
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:space-between;
+
+    gap:10px;
+
+    flex-wrap:wrap;
+}
+
+.daytitle strong{
+    color:#73f3ff;
+}
+
+.file input{
+    padding:8px;
+
+    background:#061b31;
+}
+
+.submit{
+
+    width:100%;
+
+    margin-top:20px;
+
+    padding:16px;
+
+    border:0;
+
+    border-radius:14px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #06bde9,
+            #2f70ff
+        );
+
+    color:#fff;
+
+    font-size:17px;
+
+    font-weight:800;
+
+    cursor:pointer;
+
+    box-shadow:
+        0 8px 25px rgba(0,150,255,.25);
+
+    transition:.2s;
+}
+
+.submit:hover{
+
+    transform:translateY(-2px);
+
+    box-shadow:
+        0 12px 30px rgba(0,180,255,.35);
+}
+
+.notice{
+
+    padding:12px 14px;
+
+    border-radius:12px;
+
+    background:
+        rgba(255,190,0,.09);
+
+    border:
+        1px solid rgba(255,190,0,.25);
+
+    color:#ffe9a3;
+
+    line-height:1.5;
+}
+
+.flash{
+
+    padding:12px;
+
+    border-radius:12px;
+
+    background:#3a1520;
+
+    border:
+        1px solid #a63c58;
+
+    color:#ffd8df;
+
+    margin-bottom:12px;
+}
+
+@media(max-width:800px){
+
+    .grid,
+    .grid2{
+
+        grid-template-columns:1fr;
+
+    }
+
+    .wrap{
+
+        padding:
+            20px 12px;
+
+    }
+
+}
+
 </style>
+
 </head>
+
+
 <body>
-<div class="star"></div><div class="orb"></div><div class="dna"></div>
-<nav><div class="brand">🧬 TumourScope AI</div><div class="navlinks"><span class="active">⌂ Upload</span><span>▥ Analysis</span><span>▣ Report</span></div></nav>
-<main>
-<section class="hero">
-<h1>Microscope → Insight</h1>
-<p>AI-assisted image quality checking, spheroid-like region detection, morphology measurement, Earth-control vs Microgravity comparison and day-wise growth analysis.</p>
-</section>
-<form class="panel" action="/analyze" method="post" enctype="multipart/form-data">
-<h2>🧪 Experimental Time Points</h2>
-<div class="sub">Upload one Earth-control image and one Microgravity image for each available day. You can submit Day 1 only, or all five days.</div>
-<div class="grid">
-{% for d in range(1,6) %}
-<div class="day">
-<h3>◉ Day {{d}}</h3>
-<label>Time Point</label><input type="text" name="time_{{d}}" value="Day {{d}}">
-<label>🔵 Earth Control Image</label><input type="file" name="earth_{{d}}" accept="image/*">
-<label>🟣 Microgravity Image</label><input type="file" name="micro_{{d}}" accept="image/*">
+
+<div class="wrap">
+
+
+<!-- HERO -->
+
+<div class="hero">
+
+<h1>
+Microscope → Research Insight
+</h1>
+
+<p>
+Research-focused tumour spheroid image analysis with
+quality control, measurable results,
+Earth-control vs Microgravity comparison,
+database history and research reporting.
+</p>
+
 </div>
+
+
+<!-- NAVIGATION -->
+
+<div class="nav">
+
+<a href="{{ url_for('index') }}">
+New Experiment
+</a>
+
+<a href="{{ url_for('history') }}">
+Experiment History
+</a>
+
+</div>
+
+
+<!-- FLASH MESSAGES -->
+
+{% with messages =
+get_flashed_messages(with_categories=true) %}
+
+{% for category, message in messages %}
+
+<div class="flash">
+{{ message }}
+</div>
+
 {% endfor %}
+
+{% endwith %}
+
+
+<!-- MAIN FORM -->
+
+<form
+    method="post"
+    action="{{ url_for('analyze') }}"
+    enctype="multipart/form-data"
+>
+
+
+<!-- EXPERIMENT INFORMATION -->
+
+<section class="card">
+
+<h2>
+🧪 Experiment Information
+</h2>
+
+<p class="hint">
+
+These details are stored in the SQLite database
+with the analysis results.
+
+</p>
+
+
+<div class="grid">
+
+
+<div class="field">
+
+<label>
+Experiment Name *
+</label>
+
+<input
+    name="experiment_name"
+    required
+    placeholder="Example: Tumour Growth Study"
+>
+
 </div>
-<button type="submit">✦ Analyze with TumourScope AI</button>
-<div class="disclaimer">⚠ Research prototype. The detector is explainable computer vision, not a trained medical AI model. Measurements depend on image quality and microscope calibration.</div>
+
+
+<div class="field">
+
+<label>
+Researcher
+</label>
+
+<input
+    name="researcher"
+    placeholder="Your name"
+>
+
+</div>
+
+
+<div class="field">
+
+<label>
+Sample ID
+</label>
+
+<input
+    name="sample_id"
+    placeholder="Example: SAMPLE-01"
+>
+
+</div>
+
+
+<div class="field">
+
+<label>
+Cell Line
+</label>
+
+<input
+    name="cell_line"
+    placeholder="Example: MCF-7"
+>
+
+</div>
+
+
+<div class="field">
+
+<label>
+Experiment Date
+</label>
+
+<input
+    type="date"
+    name="experiment_date"
+>
+
+</div>
+
+
+<div class="field">
+
+<label>
+Microscope Magnification
+</label>
+
+<input
+    name="microscope_magnification"
+    placeholder="Example: 10x"
+>
+
+</div>
+
+
+</div>
+
+</section>
+
+
+<!-- CALIBRATION -->
+
+<section class="card">
+
+<h2>
+🔬 Microscope Calibration
+</h2>
+
+<p class="hint">
+
+Enter how many image pixels represent 1 µm.
+The default 2.0 is only a demonstration value.
+
+</p>
+
+<div class="field">
+
+<label>
+Pixels per micrometre
+</label>
+
+<input
+    type="number"
+    step="0.01"
+    min="0.01"
+    name="pixels_per_um"
+    value="{{ default_pixels_per_um }}"
+    required
+>
+
+</div>
+
+</section>
+
+
+<!-- TIME POINTS -->
+
+<section class="card">
+
+<h2>
+📅 Experimental Time Points
+</h2>
+
+<p class="hint">
+
+Upload one complete Earth-control +
+Microgravity pair for each day you want to analyse.
+You can submit one pair or all five.
+
+</p>
+
+
+{% for day in range(1,6) %}
+
+<div class="day">
+
+
+<div class="daytitle">
+
+<strong>
+Day {{ day }}
+</strong>
+
+
+<div
+    class="field"
+    style="min-width:230px"
+>
+
+<label>
+Time Point
+</label>
+
+<input
+    name="time_{{ day }}"
+    value="Day {{ day }}"
+>
+
+</div>
+
+</div>
+
+
+<div class="grid2">
+
+
+<div class="field file">
+
+<label>
+🌍 Earth Control Image
+</label>
+
+<input
+    type="file"
+    name="earth_{{ day }}"
+    accept="image/*"
+>
+
+</div>
+
+
+<div class="field file">
+
+<label>
+🚀 Microgravity Image
+</label>
+
+<input
+    type="file"
+    name="micro_{{ day }}"
+    accept="image/*"
+>
+
+</div>
+
+
+</div>
+
+</div>
+
+{% endfor %}
+
+</section>
+
+
+<!-- RESEARCH NOTES -->
+
+<section class="card">
+
+<h2>
+📝 Research Notes
+</h2>
+
+<div class="field">
+
+<textarea
+    name="research_notes"
+    placeholder="Observations, treatment details, experimental notes..."
+></textarea>
+
+</div>
+
+</section>
+
+
+<!-- DISCLAIMER -->
+
+<div class="notice">
+
+⚠️ Research prototype only.
+Results are image-derived measurements
+and are not medical diagnosis.
+Real µm measurements require actual
+microscope calibration and validation.
+
+</div>
+
+
+<!-- SUBMIT -->
+
+<button
+    class="submit"
+    type="submit"
+>
+
+Analyze Experiment & Save to Database
+
+</button>
+
+
 </form>
-<div class="features">
-<div class="feature">🟢 Automatic Detection</div><div class="feature">▣ Boundary Detection</div><div class="feature">▥ Day-wise Analysis</div><div class="feature">↗ Growth %</div><div class="feature">▣ Research PDF</div>
+
+
 </div>
-</main>
+
 </body>
+
 </html>

@@ -1,336 +1,1453 @@
-from flask import Flask, render_template, request, send_file
+from flask import Flask, render_template, request, redirect, url_for, send_file, flash
 import os
 import uuid
 import math
+import csv
+import sqlite3
+from datetime import datetime
 from pathlib import Path
 
 import cv2
 import numpy as np
-from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
+from reportlab.pdfgen import canvas
 
-app = Flask(__name__)
 
-BASE = Path(__file__).resolve().parent
-UPLOAD_DIR = BASE / "static" / "uploads"
-GENERATED_DIR = BASE / "static" / "generated"
+BASE_DIR = Path(__file__).resolve().parent
+
+UPLOAD_DIR = BASE_DIR / "static" / "uploads"
+GENERATED_DIR = BASE_DIR / "static" / "generated"
+DB_PATH = BASE_DIR / "tumourscope.db"
+
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 GENERATED_DIR.mkdir(parents=True, exist_ok=True)
 
-# Demo calibration only. Replace with the real microscope calibration for real measurements.
-PIXELS_PER_UM = 2.0
-ALLOWED = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp"}
+app = Flask(__name__)
+
+app.secret_key = "tumourscope-ai-research-prototype"
+
+ALLOWED_EXTENSIONS = {
+    "png",
+    "jpg",
+    "jpeg",
+    "tif",
+    "tiff",
+    "bmp",
+    "webp",
+}
+
+DEFAULT_PIXELS_PER_UM = 2.0
 
 
-def quality_check(gray, contour, mask):
-    h, w = gray.shape[:2]
-    brightness = float(np.mean(gray))
-    contrast = float(np.std(gray))
-    blur = float(cv2.Laplacian(gray, cv2.CV_64F).var())
-    resolution_ok = h >= 128 and w >= 128
+# =========================================================
+# DATABASE
+# =========================================================
 
-    if brightness < 45:
-        brightness_status = "Too dark"
-    elif brightness > 215:
-        brightness_status = "Too bright"
-    else:
-        brightness_status = "Good"
-
-    if blur < 40:
-        blur_status = "Blurry"
-    elif blur < 120:
-        blur_status = "Acceptable"
-    else:
-        blur_status = "Sharp"
-
-    if contrast < 18:
-        contrast_status = "Low contrast"
-    else:
-        contrast_status = "Good"
-
-    spheroid_present = contour is not None and cv2.contourArea(contour) > max(80, h*w*0.0002)
-    score_parts = [
-        1 if resolution_ok else 0,
-        1 if 45 <= brightness <= 215 else 0,
-        1 if blur >= 40 else 0,
-        1 if contrast >= 18 else 0,
-        1 if spheroid_present else 0,
-    ]
-    quality_score = round(100 * sum(score_parts) / len(score_parts))
-    return {
-        "resolution": f"{w} × {h}",
-        "resolution_ok": resolution_ok,
-        "brightness": round(brightness, 1),
-        "brightness_status": brightness_status,
-        "blur": round(blur, 1),
-        "blur_status": blur_status,
-        "contrast": round(contrast, 1),
-        "contrast_status": contrast_status,
-        "spheroid_present": spheroid_present,
-        "quality_score": quality_score,
-    }
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
 
 
-def choose_contour(gray):
-    # Explainable CV detector: denoise -> threshold -> morphology -> contour scoring.
-    smooth = cv2.GaussianBlur(gray, (5, 5), 0)
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    enhanced = clahe.apply(smooth)
+def init_db():
+    conn = get_db()
 
-    candidates = []
-    for polarity in (cv2.THRESH_BINARY, cv2.THRESH_BINARY_INV):
-        _, th = cv2.threshold(enhanced, 0, 255, polarity + cv2.THRESH_OTSU)
-        kernel = np.ones((5, 5), np.uint8)
-        th = cv2.morphologyEx(th, cv2.MORPH_OPEN, kernel, iterations=1)
-        th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, kernel, iterations=2)
-        contours, _ = cv2.findContours(th, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    conn.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS experiments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            experiment_name TEXT NOT NULL,
+            researcher TEXT,
+            sample_id TEXT,
+            cell_line TEXT,
+            experiment_date TEXT,
+            microscope_magnification TEXT,
+            pixels_per_um REAL NOT NULL,
+            research_notes TEXT,
+            created_at TEXT NOT NULL
+        );
 
-        h, w = gray.shape[:2]
-        image_area = h * w
-        for c in contours:
-            area = cv2.contourArea(c)
-            if area < max(80, image_area * 0.0002) or area > image_area * 0.75:
-                continue
-            perimeter = cv2.arcLength(c, True)
-            if perimeter <= 0:
-                continue
-            circularity = 4 * math.pi * area / (perimeter * perimeter)
-            x, y, cw, ch = cv2.boundingRect(c)
-            extent = area / max(1, cw * ch)
-            cx, cy = x + cw/2, y + ch/2
-            center_dist = math.hypot(cx - w/2, cy - h/2) / math.hypot(w/2, h/2)
+        CREATE TABLE IF NOT EXISTS timepoints (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            experiment_id INTEGER NOT NULL,
+            day INTEGER NOT NULL,
+            time_label TEXT,
 
-            # Spheroid-like objects tend to be compact, fairly round and not touch the image edge.
-            score = (
-                0.50 * min(1.0, max(0.0, circularity)) +
-                0.25 * min(1.0, extent / 0.78) +
-                0.20 * max(0.0, 1.0 - center_dist) +
-                0.05 * min(1.0, math.log10(area + 1) / 5)
-            )
-            candidates.append((score, c, circularity))
+            earth_original TEXT,
+            earth_processed TEXT,
 
-    if not candidates:
-        return None, 0.0, None
+            micro_original TEXT,
+            micro_processed TEXT,
 
-    candidates.sort(key=lambda x: x[0], reverse=True)
-    score, contour, circularity = candidates[0]
-    confidence = int(round(max(0.0, min(1.0, score)) * 100))
-    return contour, confidence, circularity
+            earth_area_px REAL,
+            earth_area_um2 REAL,
+            earth_diameter_px REAL,
+            earth_diameter_um REAL,
+            earth_circularity REAL,
+            earth_confidence REAL,
+            earth_quality_score REAL,
+            earth_quality_notes TEXT,
 
+            micro_area_px REAL,
+            micro_area_um2 REAL,
+            micro_diameter_px REAL,
+            micro_diameter_um REAL,
+            micro_circularity REAL,
+            micro_confidence REAL,
+            micro_quality_score REAL,
+            micro_quality_notes TEXT,
 
-def analyze_image(path, label):
-    img = cv2.imread(str(path))
-    if img is None:
-        raise ValueError(f"Could not read {label} image.")
+            area_change_percent REAL,
+            diameter_change_percent REAL,
 
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    contour, confidence, _ = choose_contour(gray)
+            created_at TEXT NOT NULL,
 
-    overlay = img.copy()
-    mask = np.zeros(gray.shape, dtype=np.uint8)
+            UNIQUE(experiment_id, day),
 
-    if contour is not None:
-        cv2.drawContours(mask, [contour], -1, 255, thickness=-1)
-        cv2.drawContours(overlay, [contour], -1, (255, 180, 0), 3)
-        x, y, w, h = cv2.boundingRect(contour)
-        cv2.rectangle(overlay, (x, y), (x+w, y+h), (255, 255, 0), 2)
-
-        area_px = float(cv2.contourArea(contour))
-        perimeter_px = float(cv2.arcLength(contour, True))
-        diameter_px = float(max(w, h))
-        circularity = float(4 * math.pi * area_px / (perimeter_px**2)) if perimeter_px else 0.0
-        area_um2 = area_px / (PIXELS_PER_UM ** 2)
-        diameter_um = diameter_px / PIXELS_PER_UM
-    else:
-        area_um2 = diameter_um = circularity = 0.0
-
-    q = quality_check(gray, contour, mask)
-
-    # If the image is questionable, keep the measurement but make the warning explicit.
-    warnings = []
-    if confidence < 60:
-        warnings.append("Low-confidence spheroid detection")
-    if not q["resolution_ok"]:
-        warnings.append("Low image resolution")
-    if q["blur"] < 40:
-        warnings.append("Image may be blurry")
-    if q["brightness_status"] != "Good":
-        warnings.append(q["brightness_status"])
-    if q["contrast_status"] != "Good":
-        warnings.append(q["contrast_status"])
-    if not q["spheroid_present"]:
-        warnings.append("Spheroid-like region not confidently found")
-
-    uid = uuid.uuid4().hex[:10]
-    out_name = f"{uid}_{label}_detected.png"
-    out_path = GENERATED_DIR / out_name
-    cv2.imwrite(str(out_path), overlay)
-
-    return {
-        "label": label,
-        "original_url": "/" + str(path.relative_to(BASE)).replace("\\", "/"),
-        "processed_url": "/" + str(out_path.relative_to(BASE)).replace("\\", "/"),
-        "diameter": round(diameter_um, 2),
-        "area": round(area_um2, 2),
-        "circularity": round(circularity, 3),
-        "confidence": confidence,
-        "quality": q,
-        "warnings": warnings,
-        "detected": contour is not None,
-    }
-
-
-def save_upload(file, prefix):
-    if not file or not file.filename:
-        return None
-    ext = Path(file.filename).suffix.lower()
-    if ext not in ALLOWED:
-        raise ValueError(f"Unsupported file type: {ext}")
-    name = f"{uuid.uuid4().hex}_{prefix}{ext}"
-    path = UPLOAD_DIR / name
-    file.save(path)
-    return path
-
-
-def pct_change(a, b):
-    if a == 0:
-        return 0.0
-    return ((b - a) / a) * 100.0
-
-
-def build_summary(days):
-    if not days:
-        return "No measurable time point was submitted."
-    valid = [d for d in days if d["earth"]["detected"] and d["micro"]["detected"]]
-    if not valid:
-        return "The submitted images did not produce a confident pair of spheroid-like detections. Review image quality and microscope calibration."
-
-    first = valid[0]
-    last = valid[-1]
-    earth_growth = pct_change(first["earth"]["area"], last["earth"]["area"])
-    micro_growth = pct_change(first["micro"]["area"], last["micro"]["area"])
-    avg_conf = np.mean([first["earth"]["confidence"], first["micro"]["confidence"]])
-    return (
-        f"Across {len(valid)} analyzable time point(s), the measured spheroid-like region "
-        f"area changed by {earth_growth:+.1f}% for Earth control and {micro_growth:+.1f}% "
-        f"for Microgravity. The first analyzable pair had an average detection confidence "
-        f"of {avg_conf:.0f}%. These are image-derived research measurements, not a medical diagnosis."
+            FOREIGN KEY(experiment_id)
+                REFERENCES experiments(id)
+                ON DELETE CASCADE
+        );
+        """
     )
 
+    conn.commit()
+    conn.close()
+
+
+init_db()
+
+
+# =========================================================
+# HELPERS
+# =========================================================
+
+def allowed_file(filename):
+    return (
+        "." in filename
+        and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+    )
+
+
+def safe_float(value, default=0.0):
+    try:
+        number = float(value)
+
+        if math.isfinite(number):
+            return number
+
+    except (TypeError, ValueError):
+        pass
+
+    return default
+
+
+def clamp(value, low, high):
+    return max(low, min(high, value))
+
+
+# =========================================================
+# IMAGE QUALITY
+# =========================================================
+
+def quality_check(image, selected_contour):
+
+    height, width = image.shape[:2]
+
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    brightness = float(np.mean(gray))
+    contrast = float(np.std(gray))
+
+    blur_value = float(
+        cv2.Laplacian(gray, cv2.CV_64F).var()
+    )
+
+    score = 100.0
+
+    notes = []
+
+    if width < 128 or height < 128:
+        score -= 25
+        notes.append("Low resolution")
+
+    if brightness < 45:
+        score -= 20
+        notes.append("Very dark image")
+
+    elif brightness > 215:
+        score -= 20
+        notes.append("Very bright image")
+
+    if contrast < 18:
+        score -= 20
+        notes.append("Low contrast")
+
+    if blur_value < 40:
+        score -= 20
+        notes.append("Image may be blurry")
+
+    elif blur_value < 120:
+        score -= 8
+        notes.append("Moderate sharpness")
+
+    if selected_contour is None:
+        score -= 20
+        notes.append(
+            "No suitable spheroid-like region detected"
+        )
+
+    else:
+        notes.append(
+            "Spheroid-like region detected"
+        )
+
+    score = clamp(score, 0, 100)
+
+    return {
+        "score": round(score, 1),
+        "brightness": round(brightness, 1),
+        "contrast": round(contrast, 1),
+        "blur": round(blur_value, 1),
+        "notes": notes,
+    }
+
+
+# =========================================================
+# CONTOUR DETECTION
+# =========================================================
+
+def choose_contour(gray):
+
+    blurred = cv2.GaussianBlur(
+        gray,
+        (5, 5),
+        0
+    )
+
+    clahe = cv2.createCLAHE(
+        clipLimit=2.0,
+        tileGridSize=(8, 8)
+    )
+
+    enhanced = clahe.apply(blurred)
+
+    _, binary = cv2.threshold(
+        enhanced,
+        0,
+        255,
+        cv2.THRESH_BINARY + cv2.THRESH_OTSU
+    )
+
+    _, inverse = cv2.threshold(
+        enhanced,
+        0,
+        255,
+        cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
+    )
+
+    kernel = np.ones(
+        (5, 5),
+        np.uint8
+    )
+
+    masks = []
+
+    for mask in (binary, inverse):
+
+        mask = cv2.morphologyEx(
+            mask,
+            cv2.MORPH_OPEN,
+            kernel,
+            iterations=1
+        )
+
+        mask = cv2.morphologyEx(
+            mask,
+            cv2.MORPH_CLOSE,
+            kernel,
+            iterations=2
+        )
+
+        masks.append(mask)
+
+    height, width = gray.shape[:2]
+
+    image_area = float(
+        width * height
+    )
+
+    image_center = np.array(
+        [
+            width / 2.0,
+            height / 2.0
+        ]
+    )
+
+    candidates = []
+
+    for mask in masks:
+
+        contours, _ = cv2.findContours(
+            mask,
+            cv2.RETR_EXTERNAL,
+            cv2.CHAIN_APPROX_SIMPLE
+        )
+
+        for contour in contours:
+
+            area = cv2.contourArea(
+                contour
+            )
+
+            if (
+                area < image_area * 0.002
+                or area > image_area * 0.85
+            ):
+                continue
+
+            perimeter = cv2.arcLength(
+                contour,
+                True
+            )
+
+            if perimeter <= 0:
+                continue
+
+            circularity = (
+                4.0
+                * math.pi
+                * area
+                / (perimeter * perimeter)
+            )
+
+            x, y, w, h = cv2.boundingRect(
+                contour
+            )
+
+            rect_area = max(
+                1.0,
+                float(w * h)
+            )
+
+            extent = area / rect_area
+
+            moments = cv2.moments(
+                contour
+            )
+
+            if moments["m00"] != 0:
+
+                cx = (
+                    moments["m10"]
+                    / moments["m00"]
+                )
+
+                cy = (
+                    moments["m01"]
+                    / moments["m00"]
+                )
+
+            else:
+
+                cx = x + w / 2.0
+                cy = y + h / 2.0
+
+            distance = np.linalg.norm(
+                np.array([cx, cy])
+                - image_center
+            )
+
+            max_distance = max(
+                1.0,
+                np.linalg.norm(image_center)
+            )
+
+            center_score = (
+                1.0
+                - min(
+                    1.0,
+                    distance / max_distance
+                )
+            )
+
+            circularity_score = clamp(
+                circularity,
+                0,
+                1
+            )
+
+            extent_score = clamp(
+                extent / 0.8,
+                0,
+                1
+            )
+
+            area_score = clamp(
+                math.log10(area + 1)
+                / math.log10(image_area + 1),
+                0,
+                1
+            )
+
+            score = (
+                0.50 * circularity_score
+                + 0.25 * extent_score
+                + 0.20 * center_score
+                + 0.05 * area_score
+            )
+
+            candidates.append(
+                (score, contour)
+            )
+
+    if not candidates:
+        return None, 0.0
+
+    candidates.sort(
+        key=lambda item: item[0],
+        reverse=True
+    )
+
+    best_score, best_contour = candidates[0]
+
+    return (
+        best_contour,
+        clamp(
+            best_score * 100.0,
+            0,
+            100
+        )
+    )
+
+
+# =========================================================
+# IMAGE ANALYSIS
+# =========================================================
+
+def analyze_image(
+    image_path,
+    output_path,
+    pixels_per_um
+):
+
+    image = cv2.imread(
+        str(image_path)
+    )
+
+    if image is None:
+        raise ValueError(
+            "Could not read the uploaded image."
+        )
+
+    gray = cv2.cvtColor(
+        image,
+        cv2.COLOR_BGR2GRAY
+    )
+
+    contour, confidence = choose_contour(
+        gray
+    )
+
+    quality = quality_check(
+        image,
+        contour
+    )
+
+    processed = image.copy()
+
+    metrics = {
+        "area_px": 0.0,
+        "area_um2": 0.0,
+        "diameter_px": 0.0,
+        "diameter_um": 0.0,
+        "circularity": 0.0,
+        "confidence": round(
+            confidence,
+            1
+        ),
+        "quality_score": quality["score"],
+        "quality_notes": "; ".join(
+            quality["notes"]
+        ),
+    }
+
+    if contour is not None:
+
+        area_px = float(
+            cv2.contourArea(contour)
+        )
+
+        perimeter = float(
+            cv2.arcLength(
+                contour,
+                True
+            )
+        )
+
+        x, y, w, h = cv2.boundingRect(
+            contour
+        )
+
+        diameter_px = float(
+            max(w, h)
+        )
+
+        if perimeter > 0:
+
+            circularity = (
+                4.0
+                * math.pi
+                * area_px
+                / (perimeter * perimeter)
+            )
+
+        else:
+            circularity = 0.0
+
+        circularity = clamp(
+            circularity,
+            0,
+            1
+        )
+
+        ppm = max(
+            pixels_per_um,
+            0.000001
+        )
+
+        metrics.update(
+            {
+                "area_px": round(
+                    area_px,
+                    2
+                ),
+
+                "area_um2": round(
+                    area_px
+                    / (ppm * ppm),
+                    2
+                ),
+
+                "diameter_px": round(
+                    diameter_px,
+                    2
+                ),
+
+                "diameter_um": round(
+                    diameter_px / ppm,
+                    2
+                ),
+
+                "circularity": round(
+                    circularity,
+                    4
+                ),
+            }
+        )
+
+        cv2.drawContours(
+            processed,
+            [contour],
+            -1,
+            (0, 255, 255),
+            3
+        )
+
+        cv2.rectangle(
+            processed,
+            (x, y),
+            (x + w, y + h),
+            (255, 180, 0),
+            2
+        )
+
+        label = (
+            f"Detected | conf "
+            f"{confidence:.1f}%"
+        )
+
+        cv2.putText(
+            processed,
+            label,
+            (
+                x,
+                max(
+                    25,
+                    y - 10
+                )
+            ),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.65,
+            (0, 255, 255),
+            2,
+            cv2.LINE_AA
+        )
+
+    else:
+
+        cv2.putText(
+            processed,
+            "No suitable spheroid-like region detected",
+            (20, 35),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.7,
+            (0, 80, 255),
+            2,
+            cv2.LINE_AA
+        )
+
+    cv2.imwrite(
+        str(output_path),
+        processed
+    )
+
+    return metrics
+
+
+# =========================================================
+# CALCULATIONS
+# =========================================================
+
+def percentage_change(
+    new_value,
+    old_value
+):
+
+    if (
+        old_value is None
+        or abs(old_value) < 1e-12
+    ):
+        return None
+
+    return round(
+        (
+            (new_value - old_value)
+            / old_value
+        ) * 100.0,
+        2
+    )
+
+
+# =========================================================
+# FILE SAVE
+# =========================================================
+
+def save_uploaded(
+    file_storage,
+    prefix,
+    day
+):
+
+    if (
+        not file_storage
+        or not file_storage.filename
+    ):
+        return None
+
+    if not allowed_file(
+        file_storage.filename
+    ):
+        raise ValueError(
+            f"Unsupported file type for "
+            f"{prefix} Day {day}."
+        )
+
+    extension = (
+        file_storage.filename
+        .rsplit(".", 1)[1]
+        .lower()
+    )
+
+    filename = (
+        f"{uuid.uuid4().hex}_"
+        f"{prefix}_day{day}."
+        f"{extension}"
+    )
+
+    path = UPLOAD_DIR / filename
+
+    file_storage.save(path)
+
+    return f"uploads/{filename}"
+
+
+# =========================================================
+# DATABASE LOAD
+# =========================================================
+
+def load_experiment(
+    experiment_id
+):
+
+    conn = get_db()
+
+    experiment = conn.execute(
+        """
+        SELECT *
+        FROM experiments
+        WHERE id = ?
+        """,
+        (experiment_id,)
+    ).fetchone()
+
+    timepoints = conn.execute(
+        """
+        SELECT *
+        FROM timepoints
+        WHERE experiment_id = ?
+        ORDER BY day
+        """,
+        (experiment_id,)
+    ).fetchall()
+
+    conn.close()
+
+    return experiment, timepoints
+
+
+# =========================================================
+# HOME
+# =========================================================
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+
+    return render_template(
+        "index.html",
+        default_pixels_per_um=
+            DEFAULT_PIXELS_PER_UM
+    )
 
 
-@app.route("/analyze", methods=["POST"])
+# =========================================================
+# ANALYZE
+# =========================================================
+
+@app.post("/analyze")
 def analyze():
+
+    experiment_name = (
+        request.form
+        .get(
+            "experiment_name",
+            ""
+        )
+        .strip()
+    )
+
+    researcher = (
+        request.form
+        .get(
+            "researcher",
+            ""
+        )
+        .strip()
+    )
+
+    sample_id = (
+        request.form
+        .get(
+            "sample_id",
+            ""
+        )
+        .strip()
+    )
+
+    cell_line = (
+        request.form
+        .get(
+            "cell_line",
+            ""
+        )
+        .strip()
+    )
+
+    experiment_date = (
+        request.form
+        .get(
+            "experiment_date",
+            ""
+        )
+        .strip()
+    )
+
+    microscope_magnification = (
+        request.form
+        .get(
+            "microscope_magnification",
+            ""
+        )
+        .strip()
+    )
+
+    research_notes = (
+        request.form
+        .get(
+            "research_notes",
+            ""
+        )
+        .strip()
+    )
+
+    pixels_per_um = safe_float(
+        request.form.get(
+            "pixels_per_um"
+        ),
+        DEFAULT_PIXELS_PER_UM
+    )
+
+    if not experiment_name:
+
+        flash(
+            "Please enter an Experiment Name.",
+            "error"
+        )
+
+        return redirect(
+            url_for("index")
+        )
+
+    if pixels_per_um <= 0:
+
+        flash(
+            "Pixels per micrometre must be greater than 0.",
+            "error"
+        )
+
+        return redirect(
+            url_for("index")
+        )
+
     days = []
+
     for day in range(1, 6):
-        earth = request.files.get(f"earth_{day}")
-        micro = request.files.get(f"micro_{day}")
-        time_point = request.form.get(f"time_{day}", f"Day {day}").strip() or f"Day {day}"
 
-        if not earth or not micro or not earth.filename or not micro.filename:
-            continue
+        earth = request.files.get(
+            f"earth_{day}"
+        )
 
-        try:
-            earth_path = save_upload(earth, f"day{day}_earth")
-            micro_path = save_upload(micro, f"day{day}_micro")
-            earth_result = analyze_image(earth_path, f"day{day}_earth")
-            micro_result = analyze_image(micro_path, f"day{day}_micro")
-        except Exception as exc:
-            return f"<h2>Analysis error</h2><p>{exc}</p><p><a href='/'>Back</a></p>", 400
+        micro = request.files.get(
+            f"micro_{day}"
+        )
 
-        growth = pct_change(earth_result["area"], micro_result["area"])
-        days.append({
-            "day": day,
-            "time_point": time_point,
-            "earth": earth_result,
-            "micro": micro_result,
-            "area_change": round(growth, 2),
-            "diameter_change": round(pct_change(earth_result["diameter"], micro_result["diameter"]), 2),
-        })
+        time_label = (
+            request.form
+            .get(
+                f"time_{day}",
+                f"Day {day}"
+            )
+            .strip()
+            or f"Day {day}"
+        )
+
+        if (
+            earth
+            and earth.filename
+            and micro
+            and micro.filename
+        ):
+
+            days.append(
+                (
+                    day,
+                    time_label,
+                    earth,
+                    micro
+                )
+            )
 
     if not days:
-        return "<h2>Please upload at least one complete Earth + Microgravity pair.</h2><p><a href='/'>Back</a></p>", 400
 
-    summary = build_summary(days)
-    report_token = uuid.uuid4().hex
-    # Keep results in a simple server-side in-memory store for this demo.
-    RESULTS[report_token] = {"days": days, "summary": summary}
-    return render_template("result.html", days=days, summary=summary, report_token=report_token)
+        flash(
+            "Upload at least one complete Earth-control + Microgravity image pair.",
+            "error"
+        )
 
+        return redirect(
+            url_for("index")
+        )
 
-RESULTS = {}
+    conn = get_db()
 
+    cursor = conn.cursor()
 
-@app.route("/report/<token>")
-def report(token):
-    data = RESULTS.get(token)
-    if not data:
-        return "Report session expired. Please analyze again.", 404
-
-    pdf_path = GENERATED_DIR / f"TumourScope_AI_Report_{token[:8]}.pdf"
-    styles = getSampleStyleSheet()
-    title = ParagraphStyle("Title2", parent=styles["Title"], fontSize=20, leading=24, textColor=colors.HexColor("#00e5ff"))
-    small = ParagraphStyle("Small", parent=styles["BodyText"], fontSize=8, leading=10)
-
-    doc = SimpleDocTemplate(
-        str(pdf_path), pagesize=A4,
-        rightMargin=14*mm, leftMargin=14*mm, topMargin=14*mm, bottomMargin=14*mm
+    cursor.execute(
+        """
+        INSERT INTO experiments
+        (
+            experiment_name,
+            researcher,
+            sample_id,
+            cell_line,
+            experiment_date,
+            microscope_magnification,
+            pixels_per_um,
+            research_notes,
+            created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            experiment_name,
+            researcher,
+            sample_id,
+            cell_line,
+            experiment_date,
+            microscope_magnification,
+            pixels_per_um,
+            research_notes,
+            datetime.now().isoformat(
+                timespec="seconds"
+            ),
+        )
     )
-    story = [
-        Paragraph("TumourScope AI — Research Analysis Report", title),
-        Spacer(1, 5*mm),
-        Paragraph(
-            "Research prototype. Image-derived measurements only; not a validated medical diagnostic system.",
-            small
-        ),
-        Spacer(1, 5*mm),
-        Paragraph(data["summary"], styles["BodyText"]),
-        Spacer(1, 5*mm),
-    ]
 
-    table_data = [["Day", "Earth diameter (µm)", "Micro diameter (µm)", "Earth area (µm²)", "Micro area (µm²)", "Area change %"]]
-    for d in data["days"]:
-        table_data.append([
-            d["time_point"],
-            f'{d["earth"]["diameter"]:.2f}',
-            f'{d["micro"]["diameter"]:.2f}',
-            f'{d["earth"]["area"]:.2f}',
-            f'{d["micro"]["area"]:.2f}',
-            f'{d["area_change"]:+.2f}%'
-        ])
+    experiment_id = cursor.lastrowid
 
-    t = Table(table_data, repeatRows=1)
-    t.setStyle(TableStyle([
-        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#0b3d66")),
-        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
-        ("GRID", (0,0), (-1,-1), 0.4, colors.grey),
-        ("FONTSIZE", (0,0), (-1,-1), 7),
-        ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
-        ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#eef8ff")]),
-    ]))
-    story += [t, Spacer(1, 6*mm)]
+    try:
 
-    for d in data["days"]:
-        story.append(Paragraph(f'{d["time_point"]}: detection and quality notes', styles["Heading3"]))
-        notes = []
-        for r in (d["earth"], d["micro"]):
-            notes.append(
-                f'{r["label"]}: confidence {r["confidence"]}%, quality {r["quality"]["quality_score"]}%'
-                + (f'; warnings: {", ".join(r["warnings"])}' if r["warnings"] else '; no major warnings')
+        for (
+            day,
+            time_label,
+            earth_file,
+            micro_file
+        ) in days:
+
+            earth_rel = save_uploaded(
+                earth_file,
+                "earth",
+                day
             )
-        story.append(Paragraph("<br/>".join(notes), small))
-        story.append(Spacer(1, 3*mm))
 
-    doc.build(story)
-    return send_file(pdf_path, as_attachment=True, download_name="TumourScope_AI_Report.pdf")
+            micro_rel = save_uploaded(
+                micro_file,
+                "micro",
+                day
+            )
 
+            earth_input = (
+                BASE_DIR
+                / "static"
+                / earth_rel
+            )
+
+            micro_input = (
+                BASE_DIR
+                / "static"
+                / micro_rel
+            )
+
+            earth_output_name = (
+                f"{uuid.uuid4().hex}"
+                f"_earth_day{day}_processed.jpg"
+            )
+
+            micro_output_name = (
+                f"{uuid.uuid4().hex}"
+                f"_micro_day{day}_processed.jpg"
+            )
+
+            earth_output = (
+                GENERATED_DIR
+                / earth_output_name
+            )
+
+            micro_output = (
+                GENERATED_DIR
+                / micro_output_name
+            )
+
+            earth_metrics = analyze_image(
+                earth_input,
+                earth_output,
+                pixels_per_um
+            )
+
+            micro_metrics = analyze_image(
+                micro_input,
+                micro_output,
+                pixels_per_um
+            )
+
+            area_change = percentage_change(
+                micro_metrics["area_um2"],
+                earth_metrics["area_um2"]
+            )
+
+            diameter_change = percentage_change(
+                micro_metrics["diameter_um"],
+                earth_metrics["diameter_um"]
+            )
+
+            cursor.execute(
+                """
+                INSERT INTO timepoints
+                (
+                    experiment_id,
+                    day,
+                    time_label,
+
+                    earth_original,
+                    earth_processed,
+
+                    micro_original,
+                    micro_processed,
+
+                    earth_area_px,
+                    earth_area_um2,
+                    earth_diameter_px,
+                    earth_diameter_um,
+                    earth_circularity,
+                    earth_confidence,
+                    earth_quality_score,
+                    earth_quality_notes,
+
+                    micro_area_px,
+                    micro_area_um2,
+                    micro_diameter_px,
+                    micro_diameter_um,
+                    micro_circularity,
+                    micro_confidence,
+                    micro_quality_score,
+                    micro_quality_notes,
+
+                    area_change_percent,
+                    diameter_change_percent,
+
+                    created_at
+                )
+                VALUES
+                (
+                    ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?,
+                    ?
+                )
+                """,
+                (
+                    experiment_id,
+                    day,
+                    time_label,
+
+                    earth_rel,
+                    f"generated/{earth_output_name}",
+
+                    micro_rel,
+                    f"generated/{micro_output_name}",
+
+                    earth_metrics["area_px"],
+                    earth_metrics["area_um2"],
+                    earth_metrics["diameter_px"],
+                    earth_metrics["diameter_um"],
+                    earth_metrics["circularity"],
+                    earth_metrics["confidence"],
+                    earth_metrics["quality_score"],
+                    earth_metrics["quality_notes"],
+
+                    micro_metrics["area_px"],
+                    micro_metrics["area_um2"],
+                    micro_metrics["diameter_px"],
+                    micro_metrics["diameter_um"],
+                    micro_metrics["circularity"],
+                    micro_metrics["confidence"],
+                    micro_metrics["quality_score"],
+                    micro_metrics["quality_notes"],
+
+                    area_change,
+                    diameter_change,
+
+                    datetime.now().isoformat(
+                        timespec="seconds"
+                    ),
+                )
+            )
+
+        conn.commit()
+
+    except Exception:
+
+        conn.rollback()
+        conn.close()
+
+        raise
+
+    conn.close()
+
+    return redirect(
+        url_for(
+            "result",
+            experiment_id=experiment_id
+        )
+    )
+
+
+# =========================================================
+# RESULT
+# =========================================================
+
+@app.get("/result/<int:experiment_id>")
+def result(experiment_id):
+
+    experiment, timepoints = load_experiment(
+        experiment_id
+    )
+
+    if experiment is None:
+        return "Experiment not found", 404
+
+    return render_template(
+        "result.html",
+        experiment=experiment,
+        timepoints=timepoints
+    )
+
+
+# =========================================================
+# HISTORY
+# =========================================================
+
+@app.get("/history")
+def history():
+
+    conn = get_db()
+
+    experiments = conn.execute(
+        """
+        SELECT
+            e.*,
+            COUNT(t.id) AS day_count
+        FROM experiments e
+        LEFT JOIN timepoints t
+            ON t.experiment_id = e.id
+        GROUP BY e.id
+        ORDER BY e.id DESC
+        """
+    ).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "history.html",
+        experiments=experiments
+    )
+
+
+# =========================================================
+# CSV EXPORT
+# =========================================================
+
+@app.get("/export/<int:experiment_id>.csv")
+def export_csv(experiment_id):
+
+    experiment, timepoints = load_experiment(
+        experiment_id
+    )
+
+    if experiment is None:
+        return "Experiment not found", 404
+
+    filename = (
+        GENERATED_DIR
+        / f"tumourscope_experiment_{experiment_id}.csv"
+    )
+
+    with open(
+        filename,
+        "w",
+        newline="",
+        encoding="utf-8"
+    ) as csv_file:
+
+        writer = csv.writer(csv_file)
+
+        writer.writerow(
+            [
+                "Experiment",
+                "Researcher",
+                "Sample ID",
+                "Cell Line",
+                "Date",
+                "Microscope Magnification",
+                "Pixels per um",
+                "Day",
+                "Time Point",
+                "Earth Diameter um",
+                "Microgravity Diameter um",
+                "Earth Area um2",
+                "Microgravity Area um2",
+                "Area Change %",
+                "Earth Circularity",
+                "Microgravity Circularity",
+                "Earth Confidence %",
+                "Microgravity Confidence %",
+                "Earth Quality",
+                "Microgravity Quality",
+            ]
+        )
+
+        for row in timepoints:
+
+            writer.writerow(
+                [
+                    experiment["experiment_name"],
+                    experiment["researcher"],
+                    experiment["sample_id"],
+                    experiment["cell_line"],
+                    experiment["experiment_date"],
+                    experiment[
+                        "microscope_magnification"
+                    ],
+                    experiment[
+                        "pixels_per_um"
+                    ],
+                    row["day"],
+                    row["time_label"],
+                    row["earth_diameter_um"],
+                    row["micro_diameter_um"],
+                    row["earth_area_um2"],
+                    row["micro_area_um2"],
+                    row["area_change_percent"],
+                    row["earth_circularity"],
+                    row["micro_circularity"],
+                    row["earth_confidence"],
+                    row["micro_confidence"],
+                    row["earth_quality_score"],
+                    row["micro_quality_score"],
+                ]
+            )
+
+    return send_file(
+        filename,
+        as_attachment=True,
+        download_name=filename.name,
+        mimetype="text/csv"
+    )
+
+
+# =========================================================
+# PDF REPORT
+# =========================================================
+
+@app.get("/report/<int:experiment_id>.pdf")
+def report(experiment_id):
+
+    experiment, timepoints = load_experiment(
+        experiment_id
+    )
+
+    if experiment is None:
+        return "Experiment not found", 404
+
+    filename = (
+        GENERATED_DIR
+        / f"tumourscope_experiment_{experiment_id}.pdf"
+    )
+
+    pdf = canvas.Canvas(
+        str(filename),
+        pagesize=A4
+    )
+
+    width, height = A4
+
+    y = height - 45
+
+    def line(
+        text,
+        size=10,
+        gap=16
+    ):
+        nonlocal y
+
+        pdf.setFont(
+            "Helvetica",
+            size
+        )
+
+        pdf.drawString(
+            42,
+            y,
+            str(text)[:115]
+        )
+
+        y -= gap
+
+        if y < 55:
+
+            pdf.showPage()
+
+            y = height - 45
+
+    pdf.setFont(
+        "Helvetica-Bold",
+        18
+    )
+
+    pdf.drawString(
+        42,
+        y,
+        "TumourScope AI - Research Analysis Report"
+    )
+
+    y -= 28
+
+    line(
+        f"Experiment: {experiment['experiment_name']}"
+    )
+
+    line(
+        f"Researcher: {experiment['researcher'] or '-'}"
+    )
+
+    line(
+        f"Sample ID: {experiment['sample_id'] or '-'}"
+    )
+
+    line(
+        f"Cell Line: {experiment['cell_line'] or '-'}"
+    )
+
+    line(
+        f"Experiment Date: {experiment['experiment_date'] or '-'}"
+    )
+
+    line(
+        f"Microscope: {experiment['microscope_magnification'] or '-'}"
+    )
+
+    line(
+        f"Calibration: {experiment['pixels_per_um']} pixels per micrometre"
+    )
+
+    line("")
+
+    line(
+        "Important: This is a research prototype, not a medical diagnostic system.",
+        9
+    )
+
+    line(
+        "Measurements depend on image quality, contour detection and microscope calibration.",
+        9
+    )
+
+    line("")
+
+    for row in timepoints:
+
+        pdf.setFont(
+            "Helvetica-Bold",
+            12
+        )
+
+        pdf.drawString(
+            42,
+            y,
+            f"Day {row['day']} - {row['time_label']}"
+        )
+
+        y -= 20
+
+        line(
+            f"Earth: diameter {row['earth_diameter_um']} um | "
+            f"area {row['earth_area_um2']} um2 | "
+            f"circularity {row['earth_circularity']}"
+        )
+
+        line(
+            f"Microgravity: diameter {row['micro_diameter_um']} um | "
+            f"area {row['micro_area_um2']} um2 | "
+            f"circularity {row['micro_circularity']}"
+        )
+
+        line(
+            f"Area change Microgravity vs Earth: "
+            f"{row['area_change_percent']}%"
+        )
+
+        line(
+            f"Detection confidence: "
+            f"Earth {row['earth_confidence']}% | "
+            f"Microgravity {row['micro_confidence']}%"
+        )
+
+        line(
+            f"Quality score: "
+            f"Earth {row['earth_quality_score']} | "
+            f"Microgravity {row['micro_quality_score']}"
+        )
+
+        line("")
+
+    if experiment["research_notes"]:
+
+        pdf.setFont(
+            "Helvetica-Bold",
+            11
+        )
+
+        pdf.drawString(
+            42,
+            y,
+            "Research Notes"
+        )
+
+        y -= 18
+
+        for note_line in experiment[
+            "research_notes"
+        ].splitlines():
+
+            line(
+                note_line,
+                9,
+                14
+            )
+
+    pdf.save()
+
+    return send_file(
+        filename,
+        as_attachment=True,
+        download_name=filename.name,
+        mimetype="application/pdf"
+    )
+
+
+# =========================================================
+# HEALTH CHECK
+# =========================================================
+
+@app.get("/health")
+def health():
+
+    return {
+        "status": "ok",
+        "database": DB_PATH.name
+    }
+
+
+# =========================================================
+# RUN
+# =========================================================
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+
+    print(
+        f"TumourScope AI database: {DB_PATH}"
+    )
+
+    app.run(
+        host="0.0.0.0",
+        port=int(
+            os.environ.get(
+                "PORT",
+                5000
+            )
+        ),
+        debug=True
+    )
