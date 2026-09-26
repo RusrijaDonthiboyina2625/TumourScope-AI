@@ -5,14 +5,14 @@
 
 <meta charset="utf-8">
 
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
->
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <title>
 TumourScope AI | Results
 </title>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 
@@ -34,18 +34,12 @@ body{
 
     color:#eef8ff;
 
-    /*
-       RESULT PAGE BACKGROUND
-       Make sure this image exists inside:
-       static/TumourScope_Result_Background_5.png
-    */
-
     background:
         linear-gradient(
             rgba(2,10,25,0.48),
             rgba(2,10,25,0.62)
         ),
-        url("/static/TumourScope_Result_Background_5.png");
+        url("/static/TumourScope_Result_Background_5.png?v=2");
 
     background-size:cover;
 
@@ -352,6 +346,92 @@ body{
 
 }
 
+/* =========================
+   GRAPH SECTION
+========================= */
+
+.graph-section{
+
+    margin-top:20px;
+
+}
+
+.graph-title{
+
+    color:#6ef2ff;
+
+    margin-bottom:6px;
+
+}
+
+.graph-description{
+
+    color:#9dbaca;
+
+    font-size:14px;
+
+    line-height:1.5;
+
+    margin-top:0;
+
+}
+
+.chart-grid{
+
+    display:grid;
+
+    grid-template-columns:
+        repeat(2,1fr);
+
+    gap:18px;
+
+    margin-top:18px;
+
+}
+
+.chart-card{
+
+    background:
+        rgba(1,14,29,.72);
+
+    border:1px solid rgba(63,205,255,.20);
+
+    border-radius:16px;
+
+    padding:18px;
+
+    min-height:360px;
+
+}
+
+.chart-card h3{
+
+    color:#83f5ff;
+
+    margin-top:0;
+
+    margin-bottom:15px;
+
+}
+
+.chart-container{
+
+    position:relative;
+
+    height:280px;
+
+    width:100%;
+
+}
+
+/* Make circularity chart full width */
+
+.chart-card.full{
+
+    grid-column:1 / -1;
+
+}
+
 .actions{
 
     display:flex;
@@ -479,6 +559,18 @@ body{
 
     }
 
+    .chart-grid{
+
+        grid-template-columns:1fr;
+
+    }
+
+    .chart-card.full{
+
+        grid-column:auto;
+
+    }
+
 }
 
 @media(max-width:480px){
@@ -530,84 +622,35 @@ History
 
 <div class="meta">
 
-
 <div>
-
-<span>
-Experiment
-</span>
-
-<strong>
-{{ experiment['experiment_name'] }}
-</strong>
-
+<span>Experiment</span>
+<strong>{{ experiment['experiment_name'] }}</strong>
 </div>
 
-
 <div>
-
-<span>
-Researcher
-</span>
-
-<strong>
-{{ experiment['researcher'] or '-' }}
-</strong>
-
+<span>Researcher</span>
+<strong>{{ experiment['researcher'] or '-' }}</strong>
 </div>
 
-
 <div>
-
-<span>
-Sample ID
-</span>
-
-<strong>
-{{ experiment['sample_id'] or '-' }}
-</strong>
-
+<span>Sample ID</span>
+<strong>{{ experiment['sample_id'] or '-' }}</strong>
 </div>
 
-
 <div>
-
-<span>
-Cell Line
-</span>
-
-<strong>
-{{ experiment['cell_line'] or '-' }}
-</strong>
-
+<span>Cell Line</span>
+<strong>{{ experiment['cell_line'] or '-' }}</strong>
 </div>
 
-
 <div>
-
-<span>
-Date
-</span>
-
-<strong>
-{{ experiment['experiment_date'] or '-' }}
-</strong>
-
+<span>Date</span>
+<strong>{{ experiment['experiment_date'] or '-' }}</strong>
 </div>
 
-
 <div>
-
-<span>
-Calibration
-</span>
-
-<strong>
-{{ experiment['pixels_per_um'] }} px/µm
-</strong>
-
+<span>Calibration</span>
+<strong>{{ experiment['pixels_per_um'] }} px/µm</strong>
 </div>
-
 
 </div>
 
@@ -663,7 +706,6 @@ Day {{ row['day'] }}
 
 </div>
 
-
 </div>
 
 
@@ -671,84 +713,35 @@ Day {{ row['day'] }}
 
 <div class="metrics">
 
-
 <div class="metric">
-
-<span>
-Earth Diameter
-</span>
-
-<strong>
-{{ row['earth_diameter_um'] }} µm
-</strong>
-
+<span>Earth Diameter</span>
+<strong>{{ row['earth_diameter_um'] }} µm</strong>
 </div>
 
-
 <div class="metric">
-
-<span>
-Micro Diameter
-</span>
-
-<strong>
-{{ row['micro_diameter_um'] }} µm
-</strong>
-
+<span>Micro Diameter</span>
+<strong>{{ row['micro_diameter_um'] }} µm</strong>
 </div>
 
-
 <div class="metric">
-
-<span>
-Earth Area
-</span>
-
-<strong>
-{{ row['earth_area_um2'] }} µm²
-</strong>
-
+<span>Earth Area</span>
+<strong>{{ row['earth_area_um2'] }} µm²</strong>
 </div>
 
-
 <div class="metric">
-
-<span>
-Micro Area
-</span>
-
-<strong>
-{{ row['micro_area_um2'] }} µm²
-</strong>
-
+<span>Micro Area</span>
+<strong>{{ row['micro_area_um2'] }} µm²</strong>
 </div>
 
-
 <div class="metric">
-
-<span>
-Earth Circularity
-</span>
-
-<strong>
-{{ row['earth_circularity'] }}
-</strong>
-
+<span>Earth Circularity</span>
+<strong>{{ row['earth_circularity'] }}</strong>
 </div>
 
-
 <div class="metric">
-
-<span>
-Micro Circularity
-</span>
-
-<strong>
-{{ row['micro_circularity'] }}
-</strong>
-
+<span>Micro Circularity</span>
+<strong>{{ row['micro_circularity'] }}</strong>
 </div>
-
 
 <div class="metric">
 
@@ -771,7 +764,6 @@ Earth Confidence
 
 </div>
 
-
 <div class="metric">
 
 <span>
@@ -792,7 +784,6 @@ Micro Confidence
 </div>
 
 </div>
-
 
 </div>
 
@@ -858,9 +849,8 @@ Microgravity quality:
 <div class="card">
 
 <h2>
-📋 Experiment Summary
+📋 Experimental Summary
 </h2>
-
 
 <div class="tablewrap">
 
@@ -870,29 +860,17 @@ Microgravity quality:
 
 <tr>
 
-<th>
-Day
-</th>
+<th>Day</th>
 
-<th>
-Earth Area µm²
-</th>
+<th>Earth Area µm²</th>
 
-<th>
-Micro Area µm²
-</th>
+<th>Micro Area µm²</th>
 
-<th>
-Area Change %
-</th>
+<th>Area Change %</th>
 
-<th>
-Earth Diameter µm
-</th>
+<th>Earth Diameter µm</th>
 
-<th>
-Micro Diameter µm
-</th>
+<th>Micro Diameter µm</th>
 
 </tr>
 
@@ -905,33 +883,21 @@ Micro Diameter µm
 
 <tr>
 
-<td>
-{{ row['day'] }}
-</td>
+<td>{{ row['day'] }}</td>
+
+<td>{{ row['earth_area_um2'] }}</td>
+
+<td>{{ row['micro_area_um2'] }}</td>
 
 <td>
-{{ row['earth_area_um2'] }}
-</td>
-
-<td>
-{{ row['micro_area_um2'] }}
-</td>
-
-<td>
-
 {{ row['area_change_percent']
 if row['area_change_percent'] is not none
 else 'N/A' }}
-
 </td>
 
-<td>
-{{ row['earth_diameter_um'] }}
-</td>
+<td>{{ row['earth_diameter_um'] }}</td>
 
-<td>
-{{ row['micro_diameter_um'] }}
-</td>
+<td>{{ row['micro_diameter_um'] }}</td>
 
 </tr>
 
@@ -940,6 +906,84 @@ else 'N/A' }}
 </tbody>
 
 </table>
+
+</div>
+
+
+<!-- =========================
+     TIME-SERIES GRAPHS
+========================= -->
+
+<div class="graph-section">
+
+<h2 class="graph-title">
+📈 Experimental Time-Series Analysis
+</h2>
+
+<p class="graph-description">
+
+These graphs visualize the measured morphology across the available
+experimental time points. Earth Control and Microgravity are shown separately
+for comparison.
+
+</p>
+
+
+<div class="chart-grid">
+
+
+<!-- AREA GRAPH -->
+
+<div class="chart-card">
+
+<h3>
+📊 Area vs Day
+</h3>
+
+<div class="chart-container">
+
+<canvas id="areaChart"></canvas>
+
+</div>
+
+</div>
+
+
+<!-- DIAMETER GRAPH -->
+
+<div class="chart-card">
+
+<h3>
+📏 Diameter vs Day
+</h3>
+
+<div class="chart-container">
+
+<canvas id="diameterChart"></canvas>
+
+</div>
+
+</div>
+
+
+<!-- CIRCULARITY GRAPH -->
+
+<div class="chart-card full">
+
+<h3>
+⭕ Circularity vs Day
+</h3>
+
+<div class="chart-container">
+
+<canvas id="circularityChart"></canvas>
+
+</div>
+
+</div>
+
+
+</div>
 
 </div>
 
@@ -1002,7 +1046,6 @@ Your analysis is complete. Download the
 research report or structured data below.
 </p>
 
-
 <div class="actions">
 
 <a
@@ -1013,7 +1056,6 @@ research report or structured data below.
 📄 Download PDF Report
 
 </a>
-
 
 <a
     class="button"
@@ -1030,6 +1072,475 @@ research report or structured data below.
 
 
 </div>
+
+
+<!-- =========================
+     CHART JAVASCRIPT
+========================= -->
+
+<script>
+
+const days = [
+
+{% for row in timepoints %}
+"Day {{ row['day'] }}"{% if not loop.last %},{% endif %}
+{% endfor %}
+
+];
+
+
+const earthArea = [
+
+{% for row in timepoints %}
+
+{% if row['earth_area_um2'] is not none %}
+{{ row['earth_area_um2']|float }}
+{% else %}
+null
+{% endif %}
+
+{% if not loop.last %},{% endif %}
+
+{% endfor %}
+
+];
+
+
+const microArea = [
+
+{% for row in timepoints %}
+
+{% if row['micro_area_um2'] is not none %}
+{{ row['micro_area_um2']|float }}
+{% else %}
+null
+{% endif %}
+
+{% if not loop.last %},{% endif %}
+
+{% endfor %}
+
+];
+
+
+const earthDiameter = [
+
+{% for row in timepoints %}
+
+{% if row['earth_diameter_um'] is not none %}
+{{ row['earth_diameter_um']|float }}
+{% else %}
+null
+{% endif %}
+
+{% if not loop.last %},{% endif %}
+
+{% endfor %}
+
+];
+
+
+const microDiameter = [
+
+{% for row in timepoints %}
+
+{% if row['micro_diameter_um'] is not none %}
+{{ row['micro_diameter_um']|float }}
+{% else %}
+null
+{% endif %}
+
+{% if not loop.last %},{% endif %}
+
+{% endfor %}
+
+];
+
+
+const earthCircularity = [
+
+{% for row in timepoints %}
+
+{% if row['earth_circularity'] is not none %}
+{{ row['earth_circularity']|float }}
+{% else %}
+null
+{% endif %}
+
+{% if not loop.last %},{% endif %}
+
+{% endfor %}
+
+];
+
+
+const microCircularity = [
+
+{% for row in timepoints %}
+
+{% if row['micro_circularity'] is not none %}
+{{ row['micro_circularity']|float }}
+{% else %}
+null
+{% endif %}
+
+{% if not loop.last %},{% endif %}
+
+{% endfor %}
+
+];
+
+
+const chartOptions = {
+
+    responsive:true,
+
+    maintainAspectRatio:false,
+
+    interaction:{
+        mode:"index",
+        intersect:false
+    },
+
+    plugins:{
+
+        legend:{
+            labels:{
+                color:"#dff8ff"
+            }
+        }
+
+    },
+
+    scales:{
+
+        x:{
+            ticks:{
+                color:"#a9c7d8"
+            },
+
+            grid:{
+                color:"rgba(120,190,220,.12)"
+            }
+        },
+
+        y:{
+            beginAtZero:true,
+
+            ticks:{
+                color:"#a9c7d8"
+            },
+
+            grid:{
+                color:"rgba(120,190,220,.12)"
+            }
+        }
+
+    }
+
+};
+
+
+/* =========================
+   AREA CHART
+========================= */
+
+new Chart(
+
+    document.getElementById("areaChart"),
+
+    {
+
+        type:"line",
+
+        data:{
+
+            labels:days,
+
+            datasets:[
+
+                {
+
+                    label:"Earth Control",
+
+                    data:earthArea,
+
+                    borderWidth:3,
+
+                    tension:.3,
+
+                    spanGaps:true,
+
+                    borderColor:"#25eaff",
+
+                    backgroundColor:"rgba(37,234,255,.12)",
+
+                    pointRadius:5,
+
+                    pointHoverRadius:7
+
+                },
+
+                {
+
+                    label:"Microgravity",
+
+                    data:microArea,
+
+                    borderWidth:3,
+
+                    tension:.3,
+
+                    spanGaps:true,
+
+                    borderColor:"#56ffbc",
+
+                    backgroundColor:"rgba(86,255,188,.12)",
+
+                    pointRadius:5,
+
+                    pointHoverRadius:7
+
+                }
+
+            ]
+
+        },
+
+        options:{
+
+            ...chartOptions,
+
+            plugins:{
+
+                ...chartOptions.plugins,
+
+                tooltip:{
+
+                    callbacks:{
+
+                        label:function(context){
+
+                            return context.dataset.label +
+                                ": " +
+                                context.parsed.y +
+                                " µm²";
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+        }
+
+    }
+
+);
+
+
+/* =========================
+   DIAMETER CHART
+========================= */
+
+new Chart(
+
+    document.getElementById("diameterChart"),
+
+    {
+
+        type:"line",
+
+        data:{
+
+            labels:days,
+
+            datasets:[
+
+                {
+
+                    label:"Earth Control",
+
+                    data:earthDiameter,
+
+                    borderWidth:3,
+
+                    tension:.3,
+
+                    spanGaps:true,
+
+                    borderColor:"#25eaff",
+
+                    backgroundColor:"rgba(37,234,255,.12)",
+
+                    pointRadius:5,
+
+                    pointHoverRadius:7
+
+                },
+
+                {
+
+                    label:"Microgravity",
+
+                    data:microDiameter,
+
+                    borderWidth:3,
+
+                    tension:.3,
+
+                    spanGaps:true,
+
+                    borderColor:"#56ffbc",
+
+                    backgroundColor:"rgba(86,255,188,.12)",
+
+                    pointRadius:5,
+
+                    pointHoverRadius:7
+
+                }
+
+            ]
+
+        },
+
+        options:{
+
+            ...chartOptions,
+
+            plugins:{
+
+                ...chartOptions.plugins,
+
+                tooltip:{
+
+                    callbacks:{
+
+                        label:function(context){
+
+                            return context.dataset.label +
+                                ": " +
+                                context.parsed.y +
+                                " µm";
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+        }
+
+    }
+
+);
+
+
+/* =========================
+   CIRCULARITY CHART
+========================= */
+
+new Chart(
+
+    document.getElementById("circularityChart"),
+
+    {
+
+        type:"line",
+
+        data:{
+
+            labels:days,
+
+            datasets:[
+
+                {
+
+                    label:"Earth Control",
+
+                    data:earthCircularity,
+
+                    borderWidth:3,
+
+                    tension:.3,
+
+                    spanGaps:true,
+
+                    borderColor:"#25eaff",
+
+                    backgroundColor:"rgba(37,234,255,.12)",
+
+                    pointRadius:5,
+
+                    pointHoverRadius:7
+
+                },
+
+                {
+
+                    label:"Microgravity",
+
+                    data:microCircularity,
+
+                    borderWidth:3,
+
+                    tension:.3,
+
+                    spanGaps:true,
+
+                    borderColor:"#56ffbc",
+
+                    backgroundColor:"rgba(86,255,188,.12)",
+
+                    pointRadius:5,
+
+                    pointHoverRadius:7
+
+                }
+
+            ]
+
+        },
+
+        options:{
+
+            ...chartOptions,
+
+            plugins:{
+
+                ...chartOptions.plugins,
+
+                tooltip:{
+
+                    callbacks:{
+
+                        label:function(context){
+
+                            return context.dataset.label +
+                                ": " +
+                                context.parsed.y;
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+        }
+
+    }
+
+);
+
+</script>
+
 
 </body>
 
